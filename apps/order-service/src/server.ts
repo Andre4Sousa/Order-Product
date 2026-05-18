@@ -1,19 +1,15 @@
 import Fastify from 'fastify';
-import axios from 'axios';
 
 const app = Fastify({
   logger: true,
 });
 
-const PORT = 3001;
+// Ajustado para a porta correta do docker-compose e do Passo 4
+const PORT = 3002; 
 const HOST = '0.0.0.0';
-const PRODUCT_SERVICE_URL = 'http://localhost:3000';
 
-// HTTP client instance
-const client = axios.create({
-  baseURL: PRODUCT_SERVICE_URL,
-  timeout: 5000,
-});
+// Dinâmico: Lê a rede interna do Docker ou cai no localhost em dev
+const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://localhost:3001';
 
 // Mock orders database
 const orders: Array<{
@@ -49,9 +45,7 @@ app.get('/health', async (request, reply) => {
 });
 
 app.get('/orders', async (request, reply) => {
-  return {
-    orders,
-  };
+  return { orders };
 });
 
 app.get<{ Params: { id: string } }>('/orders/:id', async (request, reply) => {
@@ -66,7 +60,7 @@ app.get<{ Params: { id: string } }>('/orders/:id', async (request, reply) => {
   return order;
 });
 
-// Synchronous HTTP call to product service
+// Chamada HTTP usando FETCH nativo para o Product Service
 app.get<{ Params: { id: string } }>('/orders/:id/details', async (request, reply) => {
   const { id } = request.params;
   const order = orders.find((o) => o.id === parseInt(id));
@@ -77,11 +71,17 @@ app.get<{ Params: { id: string } }>('/orders/:id/details', async (request, reply
   }
 
   try {
-    // Synchronous call to product service to get full product details
     const productIds = order.items.map((item) => item.productId);
-    const { data: productsData } = await client.post('/products/validate', {
-      productIds,
+    
+    // Substituído client.post por fetch nativo (POST)
+    const response = await fetch(`${PRODUCT_SERVICE_URL}/products/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productIds }),
     });
+
+    if (!response.ok) throw new Error(`Product service respondeu com status ${response.status}`);
+    const productsData = await response.json();
 
     return {
       order,
@@ -97,17 +97,24 @@ app.get<{ Params: { id: string } }>('/orders/:id/details', async (request, reply
   }
 });
 
+// Criação de pedido validando itens via FETCH nativo
 app.post<{
   Body: { customerId: number; items: Array<{ productId: number; quantity: number }> };
 }>('/orders', async (request, reply) => {
   const { customerId, items } = request.body;
 
   try {
-    // Validate products exist in product service (synchronous HTTP call)
     const productIds = items.map((item) => item.productId);
-    const { data: validationData } = await client.post('/products/validate', {
-      productIds,
+    
+    // Validação usando fetch nativo
+    const responseValidate = await fetch(`${PRODUCT_SERVICE_URL}/products/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productIds }),
     });
+
+    if (!responseValidate.ok) throw new Error('Falha na comunicação de validação');
+    const validationData = await responseValidate.json();
 
     if (!validationData.allValid) {
       reply.status(400);
@@ -117,11 +124,14 @@ app.post<{
       };
     }
 
-    // Calculate total price from product service
+    // Calcula o valor total buscando os dados de cada produto via fetch nativo
     let total = 0;
     const enrichedItems = await Promise.all(
       items.map(async (item) => {
-        const { data: productData } = await client.get(`/products/${item.productId}`);
+        const resProduct = await fetch(`${PRODUCT_SERVICE_URL}/products/${item.productId}`);
+        if (!resProduct.ok) throw new Error(`Produto ${item.productId} não encontrado`);
+        const productData = await resProduct.json();
+        
         const itemTotal = productData.price * item.quantity;
         total += itemTotal;
         return {

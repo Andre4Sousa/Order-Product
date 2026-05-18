@@ -1,12 +1,14 @@
 {
   "name": "@app/order-service",
   "version": "1.0.0",
-  "private": true,
   "scripts": {
-    "dev": "ts-node src/server.ts"
+    "dev": "ts-node src/server.ts",
+    "build": "tsc"
   },
   "dependencies": {
-    "fastify": "^4.26.0",
-    "axios": "^1.6.0"
+    "fastify": "^4.26.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
   }
 }

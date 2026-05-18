@@ -2,7 +2,8 @@
   "name": "@app/api-gateway",
   "version": "1.0.0",
   "scripts": {
-    "dev": "ts-node src/server.ts"
+    "dev": "ts-node src/server.ts",
+    "build": "tsc"
   },
   "dependencies": {
     "fastify": "^4.26.0",
