@@ -8,7 +8,8 @@
   "scripts": {
     "product": "npm run dev --workspace=@app/product-service",
     "order": "npm run dev --workspace=@app/order-service",
-    "gateway": "npm run dev --workspace=@app/api-gateway"
+    "gateway": "npm run dev --workspace=@app/api-gateway",
+    "test:communication": "npx ts-node test-communication.ts"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
