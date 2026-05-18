@@ -1,0 +1,11 @@
+{
+  "name": "@app/api-gateway",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "ts-node src/server.ts"
+  },
+  "dependencies": {
+    "fastify": "^4.26.0",
+    "@fastify/http-proxy": "^9.3.0"
+  }
+}
